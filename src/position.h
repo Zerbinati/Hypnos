@@ -1,13 +1,13 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  HypnoS, a UCI chess playing engine derived from Stockfish
   Copyright (C) 2004-2024 The Stockfish developers (see AUTHORS file)
 
-  Stockfish is free software: you can redistribute it and/or modify
+  HypnoS is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Stockfish is distributed in the hope that it will be useful,
+  HypnoS is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -30,11 +30,11 @@
 #include "nnue/nnue_architecture.h"
 #include "types.h"
 
-namespace Stockfish {
+namespace Hypnos {
 
-/// StateInfo struct stores information needed to restore a Position object to
-/// its previous state when we retract a move. Whenever a move is made on the
-/// board (by calling Position::do_move), a StateInfo object must be passed.
+// StateInfo struct stores information needed to restore a Position object to
+// its previous state when we retract a move. Whenever a move is made on the
+// board (by calling Position::do_move), a StateInfo object must be passed.
 
 struct StateInfo {
 
@@ -64,17 +64,17 @@ struct StateInfo {
 };
 
 
-/// A list to keep track of the position states along the setup moves (from the
-/// start position to the position just before the search starts). Needed by
-/// 'draw by repetition' detection. Use a std::deque because pointers to
-/// elements are not invalidated upon list resizing.
+// A list to keep track of the position states along the setup moves (from the
+// start position to the position just before the search starts). Needed by
+// 'draw by repetition' detection. Use a std::deque because pointers to
+// elements are not invalidated upon list resizing.
 using StateListPtr = std::unique_ptr<std::deque<StateInfo>>;
 
 
-/// Position class stores information regarding the board representation as
-/// pieces, side to move, hash keys, castling info, etc. Important methods are
-/// do_move() and undo_move(), used by the search to update node info when
-/// traversing the search tree.
+// Position class stores information regarding the board representation as
+// pieces, side to move, hash keys, castling info, etc. Important methods are
+// do_move() and undo_move(), used by the search to update node info when
+// traversing the search tree.
 class Thread;
 
 class Position {
@@ -318,8 +318,8 @@ inline bool Position::capture(Move m) const {
     return (!empty(m.to_sq()) && m.type_of() != CASTLING) || m.type_of() == EN_PASSANT;
 }
 
-// returns true if a move is generated from the capture stage
-// having also queen promotions covered, i.e. consistency with the capture stage move generation
+// Returns true if a move is generated from the capture stage, having also
+// queen promotions covered, i.e. consistency with the capture stage move generation
 // is needed to avoid the generation of duplicate moves.
 inline bool Position::capture_stage(Move m) const {
     assert(m.is_ok());
@@ -365,6 +365,6 @@ inline void Position::do_move(Move m, StateInfo& newSt) { do_move(m, newSt, give
 
 inline StateInfo* Position::state() const { return st; }
 
-}  // namespace Stockfish
+}  // namespace Hypnos
 
 #endif  // #ifndef POSITION_H_INCLUDED

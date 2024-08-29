@@ -1,13 +1,13 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  HypnoS, a UCI chess playing engine derived from Stockfish
   Copyright (C) 2004-2024 The Stockfish developers (see AUTHORS file)
 
-  Stockfish is free software: you can redistribute it and/or modify
+  HypnoS is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Stockfish is distributed in the hope that it will be useful,
+  HypnoS is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -70,12 +70,12 @@ using fun8_t = bool (*)(HANDLE, BOOL, PTOKEN_PRIVILEGES, DWORD, PTOKEN_PRIVILEGE
     #include <stdlib.h>
 #endif
 
-namespace Stockfish {
+namespace Hypnos {
 
 namespace {
 
 // Version number or dev.
-constexpr std::string_view version = "";
+constexpr std::string_view version = "experience";
 
 // Our fancy logging facility. The trick here is to replace cin.rdbuf() and
 // cout.rdbuf() with two Tie objects that tie cin and cout to a file stream. We
@@ -159,7 +159,7 @@ class Logger {
 // Stockfish version
 std::string engine_info(bool to_uci) {
     std::stringstream ss;
-    ss << "HypnoS " << version << std::setfill('0');
+    ss << "Hypnos " << version << std::setfill('0');
 
     if constexpr (version == "dev")
     {
@@ -185,7 +185,7 @@ std::string engine_info(bool to_uci) {
 #endif
     }
 
-    ss << (to_uci ? "\nid author " : " by ") << "M.Z and Stockfish developers (see AUTHORS file)";
+    ss << (to_uci ? "\nid author " : " by ") << "the Stockfish developers (see AUTHORS file)";
 
     return ss.str();
 }
@@ -769,4 +769,4 @@ void init([[maybe_unused]] int argc, char* argv[]) {
 
 }  // namespace CommandLine
 
-}  // namespace Stockfish
+}  // namespace Hypnos

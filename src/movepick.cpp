@@ -1,13 +1,13 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  HypnoS, a UCI chess playing engine derived from Stockfish
   Copyright (C) 2004-2024 The Stockfish developers (see AUTHORS file)
 
-  Stockfish is free software: you can redistribute it and/or modify
+  HypnoS is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Stockfish is distributed in the hope that it will be useful,
+  HypnoS is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -26,7 +26,7 @@
 #include "bitboard.h"
 #include "position.h"
 
-namespace Stockfish {
+namespace Hypnos {
 
 namespace {
 
@@ -139,9 +139,9 @@ MovePicker::MovePicker(const Position& p, Move ttm, int th, const CapturePieceTo
           + !(ttm && pos.capture_stage(ttm) && pos.pseudo_legal(ttm) && pos.see_ge(ttm, threshold));
 }
 
-/// MovePicker::score() assigns a numerical value to each move in a list, used
-/// for sorting. Captures are ordered by Most Valuable Victim (MVV), preferring
-/// captures with a good history. Quiets moves are ordered using the history tables.
+// Assigns a numerical value to each move in a list, used
+// for sorting. Captures are ordered by Most Valuable Victim (MVV), preferring
+// captures with a good history. Quiets moves are ordered using the history tables.
 template<GenType Type>
 void MovePicker::score() {
 
@@ -173,7 +173,6 @@ void MovePicker::score() {
 
         else if constexpr (Type == QUIETS)
         {
-            Color     us   = pos.side_to_move();
             Piece     pc   = pos.moved_piece(m);
             PieceType pt   = type_of(pos.moved_piece(m));
             Square    from = m.from_sq();
@@ -184,31 +183,26 @@ void MovePicker::score() {
             m.value += 2 * (*pawnHistory)[pawn_structure_index(pos)][pc][to];
             m.value += 2 * (*continuationHistory[0])[pc][to];
             m.value += (*continuationHistory[1])[pc][to];
-            m.value += ((*continuationHistory[2])[pc][to] + (*continuationHistory[3])[pc][to]
-                        + (*continuationHistory[5])[pc][to])
-                     / 4;
+            m.value += (*continuationHistory[2])[pc][to] / 4;
+            m.value += (*continuationHistory[3])[pc][to];
+            m.value += (*continuationHistory[5])[pc][to];
 
             // bonus for checks
             m.value += bool(pos.check_squares(pt) & to) * 16384;
 
-            // prioritize discovered checks
-            m.value += bool(pos.blockers_for_king(~us) & from) * 32768;
-
             // bonus for escaping from capture
-            m.value += threatenedPieces & from ? (pt == QUEEN && !(to & threatenedByRook)   ? 50000
-                                                  : pt == ROOK && !(to & threatenedByMinor) ? 25000
-                                                  : !(to & threatenedByPawn)                ? 15000
+            m.value += threatenedPieces & from ? (pt == QUEEN && !(to & threatenedByRook)   ? 51000
+                                                  : pt == ROOK && !(to & threatenedByMinor) ? 24950
+                                                  : !(to & threatenedByPawn)                ? 14450
                                                                                             : 0)
                                                : 0;
 
             // malus for putting piece en prise
             m.value -= !(threatenedPieces & from)
-                       ? (pt == QUEEN ? bool(to & threatenedByRook) * 50000
-                                          + bool(to & threatenedByMinor) * 10000
-                                          + bool(to & threatenedByPawn) * 20000
-                          : pt == ROOK ? bool(to & threatenedByMinor) * 25000
-                                           + bool(to & threatenedByPawn) * 10000
-                          : pt != PAWN ? bool(to & threatenedByPawn) * 15000
+                       ? (pt == QUEEN ? bool(to & threatenedByRook) * 48150
+                                          + bool(to & threatenedByMinor) * 10650
+                          : pt == ROOK ? bool(to & threatenedByMinor) * 24500
+                          : pt != PAWN ? bool(to & threatenedByPawn) * 14950
                                        : 0)
                        : 0;
         }
@@ -216,8 +210,8 @@ void MovePicker::score() {
         else  // Type == EVASIONS
         {
             if (pos.capture_stage(m))
-                m.value =
-                  PieceValue[pos.piece_on(m.to_sq())] - type_of(pos.moved_piece(m)) + (1 << 28);
+                m.value = PieceValue[pos.piece_on(m.to_sq())] - Value(type_of(pos.moved_piece(m)))
+                        + (1 << 28);
             else
                 m.value = (*mainHistory)[pos.side_to_move()][m.from_to()]
                         + (*continuationHistory[0])[pos.moved_piece(m)][m.to_sq()]
@@ -225,8 +219,8 @@ void MovePicker::score() {
         }
 }
 
-/// MovePicker::select() returns the next move satisfying a predicate function.
-/// It never returns the TT move.
+// Returns the next move satisfying a predicate function.
+// It never returns the TT move.
 template<MovePicker::PickType T, typename Pred>
 Move MovePicker::select(Pred filter) {
 
@@ -243,15 +237,14 @@ Move MovePicker::select(Pred filter) {
     return Move::none();
 }
 
-/// MovePicker::next_move() is the most important method of the MovePicker class. It
-/// returns a new pseudo-legal move every time it is called until there are no more
-/// moves left, picking the move with the highest score from a list of generated moves.
+// Most important method of the MovePicker class. It
+// returns a new pseudo-legal move every time it is called until there are no more
+// moves left, picking the move with the highest score from a list of generated moves.
 Move MovePicker::next_move(bool skipQuiets) {
 
     auto quiet_threshold = [](Depth d) { return -3330 * d; };
 
-top:
-    switch (stage)
+top:    switch (stage)
     {
 
     case MAIN_TT :
@@ -275,7 +268,8 @@ top:
     case GOOD_CAPTURE :
         if (select<Next>([&]() {
                 // Move losing capture to endBadCaptures to be tried later
-                return pos.see_ge(*cur, -cur->value) ? true : (*endBadCaptures++ = *cur, false);
+                return pos.see_ge(*cur, Value(-cur->value)) ? true
+                                                            : (*endBadCaptures++ = *cur, false);
             }))
             return *(cur - 1);
 
@@ -316,19 +310,11 @@ top:
                 return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2];
             }))
         {
-            Move tmp = *(cur - 1);
-            if ((cur - 1)->value < -7500 && (cur - 1)->value > quiet_threshold(depth))
-            {
-                // Remaining quiets are bad
-                beginBadQuiets = cur;
+            if ((cur - 1)->value > -8000 || (cur - 1)->value <= quiet_threshold(depth))
+                return *(cur - 1);
 
-                // Prepare the pointers to loop over the bad captures
-                cur      = moves;
-                endMoves = endBadCaptures;
-
-                ++stage;
-            }
-            return tmp;
+            // Remaining quiets are bad
+            beginBadQuiets = cur - 1;
         }
 
         // Prepare the pointers to loop over the bad captures
@@ -374,11 +360,14 @@ top:
     case QCAPTURE :
         if (select<Next>([]() { return true; }))
             return *(cur - 1);
+
         // If we did not find any move and we do not try checks, we have finished
         if (depth != DEPTH_QS_CHECKS)
             return Move::none();
+
         ++stage;
         [[fallthrough]];
+
     case QCHECK_INIT :
         cur      = moves;
         endMoves = generate<QUIET_CHECKS>(pos, cur);
@@ -394,4 +383,4 @@ top:
     return Move::none();  // Silence warning
 }
 
-}  // namespace Stockfish
+}  // namespace Hypnos

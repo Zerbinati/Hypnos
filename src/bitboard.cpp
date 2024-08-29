@@ -1,13 +1,13 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  HypnoS, a UCI chess playing engine derived from Stockfish
   Copyright (C) 2004-2024 The Stockfish developers (see AUTHORS file)
 
-  Stockfish is free software: you can redistribute it and/or modify
+  HypnoS is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Stockfish is distributed in the hope that it will be useful,
+  HypnoS is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -24,7 +24,7 @@
 
 #include "misc.h"
 
-namespace Stockfish {
+namespace Hypnos {
 
 uint8_t PopCnt16[1 << 16];
 uint8_t SquareDistance[SQUARE_NB][SQUARE_NB];
@@ -46,18 +46,16 @@ void init_magics(PieceType pt, Bitboard table[], Magic magics[]);
 
 }
 
-/// safe_destination() returns the bitboard of target square for the given step
-/// from the given square. If the step is off the board, returns empty bitboard.
-
+// Returns the bitboard of target square for the given step
+// from the given square. If the step is off the board, returns empty bitboard.
 inline Bitboard safe_destination(Square s, int step) {
     Square to = Square(s + step);
     return is_ok(to) && distance(s, to) <= 2 ? square_bb(to) : Bitboard(0);
 }
 
 
-/// Bitboards::pretty() returns an ASCII representation of a bitboard suitable
-/// to be printed to standard output. Useful for debugging.
-
+// Returns an ASCII representation of a bitboard suitable
+// to be printed to standard output. Useful for debugging.
 std::string Bitboards::pretty(Bitboard b) {
 
     std::string s = "+---+---+---+---+---+---+---+---+\n";
@@ -75,9 +73,8 @@ std::string Bitboards::pretty(Bitboard b) {
 }
 
 
-/// Bitboards::init() initializes various bitboard tables. It is called at
-/// startup and relies on global objects to be already zero-initialized.
-
+// Initializes various bitboard tables. It is called at
+// startup and relies on global objects to be already zero-initialized.
 void Bitboards::init() {
 
     for (unsigned i = 0; i < (1 << 16); ++i)
@@ -137,11 +134,10 @@ Bitboard sliding_attack(PieceType pt, Square sq, Bitboard occupied) {
 }
 
 
-// init_magics() computes all rook and bishop attacks at startup. Magic
+// Computes all rook and bishop attacks at startup. Magic
 // bitboards are used to look up attacks of sliding pieces. As a reference see
 // www.chessprogramming.org/Magic_Bitboards. In particular, here we use the so
 // called "fancy" approach.
-
 void init_magics(PieceType pt, Bitboard table[], Magic magics[]) {
 
     // Optimal PRNG seeds to pick the correct magics in the shortest time
@@ -219,4 +215,4 @@ void init_magics(PieceType pt, Bitboard table[], Magic magics[]) {
 }
 }
 
-}  // namespace Stockfish
+}  // namespace Hypnos

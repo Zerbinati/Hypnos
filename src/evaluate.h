@@ -1,13 +1,13 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  HypnoS, a UCI chess playing engine derived from Stockfish
   Copyright (C) 2004-2024 The Stockfish developers (see AUTHORS file)
 
-  Stockfish is free software: you can redistribute it and/or modify
+  HypnoS is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Stockfish is distributed in the hope that it will be useful,
+  HypnoS is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -20,21 +20,22 @@
 #define EVALUATE_H_INCLUDED
 
 #include <string>
+#include <unordered_map>
 
 #include "types.h"
 
-namespace Stockfish {
+namespace Hypnos {
 
 class Position;
 
 namespace Eval {
 
+constexpr inline int SmallNetThreshold = 1165, PsqtOnlyThreshold = 2500;
+
 std::string trace(Position& pos);
 
 int   simple_eval(const Position& pos, Color c);
 Value evaluate(const Position& pos);
-
-extern std::string currentEvalFileName[2];
 
 // The default net name MUST follow the format nn-[SHA256 first 12 digits].nnue
 // for the build process (profile-build and fishtest) to work. Do not change the
@@ -44,13 +45,23 @@ extern std::string currentEvalFileName[2];
 
 namespace NNUE {
 
-void       init();
-void       verify();
+enum NetSize : int;
+
+void init();
+void verify();
 
 }  // namespace NNUE
 
+struct EvalFile {
+    std::string option_name;
+    std::string default_name;
+    std::string selected_name;
+};
+
+extern std::unordered_map<NNUE::NetSize, EvalFile> EvalFiles;
+
 }  // namespace Eval
 
-}  // namespace Stockfish
+}  // namespace Hypnos
 
 #endif  // #ifndef EVALUATE_H_INCLUDED

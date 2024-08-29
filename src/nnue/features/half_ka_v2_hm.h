@@ -1,13 +1,13 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  HypnoS, a UCI chess playing engine derived from Stockfish
   Copyright (C) 2004-2024 The Stockfish developers (see AUTHORS file)
 
-  Stockfish is free software: you can redistribute it and/or modify
+  HypnoS is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Stockfish is distributed in the hope that it will be useful,
+  HypnoS is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -27,12 +27,12 @@
 #include "../../types.h"
 #include "../nnue_common.h"
 
-namespace Stockfish {
+namespace Hypnos {
 struct StateInfo;
 class Position;
 }
 
-namespace Stockfish::Eval::NNUE::Features {
+namespace Hypnos::Eval::NNUE::Features {
 
 // Feature HalfKAv2_hm: Combination of the position of own king
 // and the position of pieces. Position mirrored such that king always on e..h files.
@@ -79,31 +79,48 @@ class HalfKAv2_hm {
       static_cast<IndexType>(SQUARE_NB) * static_cast<IndexType>(PS_NB) / 2;
 
 #define B(v) (v * PS_NB)
+    // clang-format off
     static constexpr int KingBuckets[COLOR_NB][SQUARE_NB] = {
-      {B(28), B(29), B(30), B(31), B(31), B(30), B(29), B(28), B(24), B(25), B(26), B(27), B(27),
-       B(26), B(25), B(24), B(20), B(21), B(22), B(23), B(23), B(22), B(21), B(20), B(16), B(17),
-       B(18), B(19), B(19), B(18), B(17), B(16), B(12), B(13), B(14), B(15), B(15), B(14), B(13),
-       B(12), B(8),  B(9),  B(10), B(11), B(11), B(10), B(9),  B(8),  B(4),  B(5),  B(6),  B(7),
-       B(7),  B(6),  B(5),  B(4),  B(0),  B(1),  B(2),  B(3),  B(3),  B(2),  B(1),  B(0)},
-      {B(0),  B(1),  B(2),  B(3),  B(3),  B(2),  B(1),  B(0),  B(4),  B(5),  B(6),  B(7),  B(7),
-       B(6),  B(5),  B(4),  B(8),  B(9),  B(10), B(11), B(11), B(10), B(9),  B(8),  B(12), B(13),
-       B(14), B(15), B(15), B(14), B(13), B(12), B(16), B(17), B(18), B(19), B(19), B(18), B(17),
-       B(16), B(20), B(21), B(22), B(23), B(23), B(22), B(21), B(20), B(24), B(25), B(26), B(27),
-       B(27), B(26), B(25), B(24), B(28), B(29), B(30), B(31), B(31), B(30), B(29), B(28)}};
+      { B(28), B(29), B(30), B(31), B(31), B(30), B(29), B(28),
+        B(24), B(25), B(26), B(27), B(27), B(26), B(25), B(24),
+        B(20), B(21), B(22), B(23), B(23), B(22), B(21), B(20),
+        B(16), B(17), B(18), B(19), B(19), B(18), B(17), B(16),
+        B(12), B(13), B(14), B(15), B(15), B(14), B(13), B(12),
+        B( 8), B( 9), B(10), B(11), B(11), B(10), B( 9), B( 8),
+        B( 4), B( 5), B( 6), B( 7), B( 7), B( 6), B( 5), B( 4),
+        B( 0), B( 1), B( 2), B( 3), B( 3), B( 2), B( 1), B( 0) },
+      { B( 0), B( 1), B( 2), B( 3), B( 3), B( 2), B( 1), B( 0),
+        B( 4), B( 5), B( 6), B( 7), B( 7), B( 6), B( 5), B( 4),
+        B( 8), B( 9), B(10), B(11), B(11), B(10), B( 9), B( 8),
+        B(12), B(13), B(14), B(15), B(15), B(14), B(13), B(12),
+        B(16), B(17), B(18), B(19), B(19), B(18), B(17), B(16),
+        B(20), B(21), B(22), B(23), B(23), B(22), B(21), B(20),
+        B(24), B(25), B(26), B(27), B(27), B(26), B(25), B(24),
+        B(28), B(29), B(30), B(31), B(31), B(30), B(29), B(28) }
+    };
+    // clang-format on
 #undef B
-
+    // clang-format off
     // Orient a square according to perspective (rotates by 180 for black)
     static constexpr int OrientTBL[COLOR_NB][SQUARE_NB] = {
-      {SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1, SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1,
-       SQ_A1, SQ_A1, SQ_A1, SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1, SQ_H1, SQ_H1,
-       SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1, SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1,
-       SQ_A1, SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1, SQ_H1, SQ_H1, SQ_H1, SQ_H1,
-       SQ_A1, SQ_A1, SQ_A1, SQ_A1, SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1},
-      {SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8, SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8,
-       SQ_A8, SQ_A8, SQ_A8, SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8, SQ_H8, SQ_H8,
-       SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8, SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8,
-       SQ_A8, SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8, SQ_H8, SQ_H8, SQ_H8, SQ_H8,
-       SQ_A8, SQ_A8, SQ_A8, SQ_A8, SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8}};
+      { SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1,
+        SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1,
+        SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1,
+        SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1,
+        SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1,
+        SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1,
+        SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1,
+        SQ_H1, SQ_H1, SQ_H1, SQ_H1, SQ_A1, SQ_A1, SQ_A1, SQ_A1 },
+      { SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8,
+        SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8,
+        SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8,
+        SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8,
+        SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8,
+        SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8,
+        SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8,
+        SQ_H8, SQ_H8, SQ_H8, SQ_H8, SQ_A8, SQ_A8, SQ_A8, SQ_A8 }
+    };
+    // clang-format on
 
     // Maximum number of simultaneously active features.
     static constexpr IndexType MaxActiveDimensions = 32;
@@ -128,6 +145,6 @@ class HalfKAv2_hm {
     static bool requires_refresh(const StateInfo* st, Color perspective);
 };
 
-}  // namespace Stockfish::Eval::NNUE::Features
+}  // namespace Hypnos::Eval::NNUE::Features
 
 #endif  // #ifndef NNUE_FEATURES_HALF_KA_V2_HM_H_INCLUDED

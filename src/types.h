@@ -1,13 +1,13 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  HypnoS, a UCI chess playing engine derived from Stockfish
   Copyright (C) 2004-2024 The Stockfish developers (see AUTHORS file)
 
-  Stockfish is free software: you can redistribute it and/or modify
+  HypnoS is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Stockfish is distributed in the hope that it will be useful,
+  HypnoS is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -19,41 +19,41 @@
 #ifndef TYPES_H_INCLUDED
     #define TYPES_H_INCLUDED
 
-/// When compiling with provided Makefile (e.g. for Linux and OSX), configuration
-/// is done automatically. To get started type 'make help'.
-///
-/// When Makefile is not used (e.g. with Microsoft Visual Studio) some switches
-/// need to be set manually:
-///
-/// -DNDEBUG      | Disable debugging mode. Always use this for release.
-///
-/// -DNO_PREFETCH | Disable use of prefetch asm-instruction. You may need this to
-///               | run on some very old machines.
-///
-/// -DUSE_POPCNT  | Add runtime support for use of popcnt asm-instruction. Works
-///               | only in 64-bit mode and requires hardware with popcnt support.
-///
-/// -DUSE_PEXT    | Add runtime support for use of pext asm-instruction. Works
-///               | only in 64-bit mode and requires hardware with pext support.
+// When compiling with provided Makefile (e.g. for Linux and OSX), configuration
+// is done automatically. To get started type 'make help'.
+//
+// When Makefile is not used (e.g. with Microsoft Visual Studio) some switches
+// need to be set manually:
+//
+// -DNDEBUG      | Disable debugging mode. Always use this for release.
+//
+// -DNO_PREFETCH | Disable use of prefetch asm-instruction. You may need this to
+//               | run on some very old machines.
+//
+// -DUSE_POPCNT  | Add runtime support for use of popcnt asm-instruction. Works
+//               | only in 64-bit mode and requires hardware with popcnt support.
+//
+// -DUSE_PEXT    | Add runtime support for use of pext asm-instruction. Works
+//               | only in 64-bit mode and requires hardware with pext support.
 
     #include <cassert>
     #include <cstdint>
 
     #if defined(_MSC_VER)
-        // Disable some silly and noisy warning from MSVC compiler
+        // Disable some silly and noisy warnings from MSVC compiler
         #pragma warning(disable: 4127)  // Conditional expression is constant
         #pragma warning(disable: 4146)  // Unary minus operator applied to unsigned type
         #pragma warning(disable: 4800)  // Forcing value to bool 'true' or 'false'
     #endif
 
-/// Predefined macros hell:
-///
-/// __GNUC__                Compiler is GCC, Clang or ICX
-/// __clang__               Compiler is Clang or ICX
-/// __INTEL_LLVM_COMPILER   Compiler is ICX
-/// _MSC_VER                Compiler is MSVC
-/// _WIN32                  Building on Windows (any)
-/// _WIN64                  Building on Windows 64 bit
+// Predefined macros hell:
+//
+// __GNUC__                Compiler is GCC, Clang or ICX
+// __clang__               Compiler is Clang or ICX
+// __INTEL_LLVM_COMPILER   Compiler is ICX
+// _MSC_VER                Compiler is MSVC
+// _WIN32                  Building on Windows (any)
+// _WIN64                  Building on Windows 64 bit
 
     #if defined(__GNUC__) && (__GNUC__ < 9 || (__GNUC__ == 9 && __GNUC_MINOR__ <= 2)) \
       && defined(_WIN32) && !defined(__clang__)
@@ -82,7 +82,7 @@
         #define pext(b, m) 0
     #endif
 
-namespace Stockfish {
+namespace Hypnos {
 
     #ifdef USE_POPCNT
 constexpr bool HasPopCnt = true;
@@ -345,7 +345,7 @@ ENABLE_INCR_OPERATORS_ON(Rank)
 constexpr Direction operator+(Direction d1, Direction d2) { return Direction(int(d1) + int(d2)); }
 constexpr Direction operator*(int i, Direction d) { return Direction(i * int(d)); }
 
-/// Additional operators to add a Direction to a Square
+// Additional operators to add a Direction to a Square
 constexpr Square operator+(Square s, Direction d) { return Square(int(s) + int(d)); }
 constexpr Square operator-(Square s, Direction d) { return Square(int(s) - int(d)); }
 inline Square&   operator+=(Square& s, Direction d) { return s = s + d; }
@@ -425,7 +425,7 @@ enum MoveType {
 // while Move::none() and Move::null() have the same origin and destination square.
 class Move {
    public:
-                       Move() = default;
+    Move() = default;
     constexpr explicit Move(std::uint16_t d) :
         data(d) {}
 
@@ -473,7 +473,7 @@ class Move {
     std::uint16_t data;
 };
 
-}  // namespace Stockfish
+}  // namespace Hypnos
 
 #endif  // #ifndef TYPES_H_INCLUDED
 

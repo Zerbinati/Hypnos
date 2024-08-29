@@ -1,13 +1,13 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  HypnoS, a UCI chess playing engine derived from Stockfish
   Copyright (C) 2004-2024 The Stockfish developers (see AUTHORS file)
 
-  Stockfish is free software: you can redistribute it and/or modify
+  HypnoS is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Stockfish is distributed in the hope that it will be useful,
+  HypnoS is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -21,17 +21,17 @@
 
 #include <thread>
 
-/// On OSX threads other than the main thread are created with a reduced stack
-/// size of 512KB by default, this is too low for deep searches, which require
-/// somewhat more than 1MB stack, so adjust it to TH_STACK_SIZE.
-/// The implementation calls pthread_create() with the stack size parameter
-/// equal to the linux 8MB default, on platforms that support it.
+// On OSX threads other than the main thread are created with a reduced stack
+// size of 512KB by default, this is too low for deep searches, which require
+// somewhat more than 1MB stack, so adjust it to TH_STACK_SIZE.
+// The implementation calls pthread_create() with the stack size parameter
+// equal to the Linux 8MB default, on platforms that support it.
 
 #if defined(__APPLE__) || defined(__MINGW32__) || defined(__MINGW64__) || defined(USE_PTHREADS)
 
     #include <pthread.h>
 
-namespace Stockfish {
+namespace Hypnos {
 
 static const size_t TH_STACK_SIZE = 8 * 1024 * 1024;
 
@@ -58,15 +58,15 @@ class NativeThread {
     void join() { pthread_join(thread, nullptr); }
 };
 
-}  // namespace Stockfish
+}  // namespace Hypnos
 
 #else  // Default case: use STL classes
 
-namespace Stockfish {
+namespace Hypnos {
 
 using NativeThread = std::thread;
 
-}  // namespace Stockfish
+}  // namespace Hypnos
 
 #endif
 

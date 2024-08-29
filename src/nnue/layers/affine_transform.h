@@ -1,13 +1,13 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  HypnoS, a UCI chess playing engine derived from Stockfish
   Copyright (C) 2004-2024 The Stockfish developers (see AUTHORS file)
 
-  Stockfish is free software: you can redistribute it and/or modify
+  HypnoS is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Stockfish is distributed in the hope that it will be useful,
+  HypnoS is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -37,7 +37,7 @@
     - accumulation happens directly to int32s
 */
 
-namespace Stockfish::Eval::NNUE::Layers {
+namespace Hypnos::Eval::NNUE::Layers {
 
 // Fallback implementation for older/other architectures.
 // Requires the input to be padded to at least 16 values.
@@ -47,8 +47,8 @@ static void affine_transform_non_ssse3(std::int32_t*       output,
                                        const std::int8_t*  weights,
                                        const std::int32_t* biases,
                                        const std::uint8_t* input) {
-    #if defined(USE_SSE2)
-        #if defined(USE_SSE2) || defined(USE_NEON_DOTPROD) || defined(USE_NEON)
+    #if defined(USE_SSE2) || defined(USE_NEON_DOTPROD) || defined(USE_NEON)
+        #if defined(USE_SSE2)
     // At least a multiple of 16, with SSE2.
     constexpr IndexType NumChunks   = ceil_to_multiple<IndexType>(InputDimensions, 16) / 16;
     const __m128i       Zeros       = _mm_setzero_si128();
@@ -111,10 +111,8 @@ static void affine_transform_non_ssse3(std::int32_t*       output,
         }
         output[i] = sum[0] + sum[1] + sum[2] + sum[3];
 
-
         #endif
     }
-
     #else
     std::memcpy(output, biases, sizeof(std::int32_t) * OutputDimensions);
 
@@ -202,21 +200,18 @@ class AffineTransform {
         #define vec_setzero _mm512_setzero_si512
         #define vec_set_32 _mm512_set1_epi32
         #define vec_add_dpbusd_32 Simd::m512_add_dpbusd_epi32
-        #define vec_add_dpbusd_32x2 Simd::m512_add_dpbusd_epi32x2
         #define vec_hadd Simd::m512_hadd
     #elif defined(USE_AVX2)
             using vec_t = __m256i;
         #define vec_setzero _mm256_setzero_si256
         #define vec_set_32 _mm256_set1_epi32
         #define vec_add_dpbusd_32 Simd::m256_add_dpbusd_epi32
-        #define vec_add_dpbusd_32x2 Simd::m256_add_dpbusd_epi32x2
         #define vec_hadd Simd::m256_hadd
     #elif defined(USE_SSSE3)
             using vec_t = __m128i;
         #define vec_setzero _mm_setzero_si128
         #define vec_set_32 _mm_set1_epi32
         #define vec_add_dpbusd_32 Simd::m128_add_dpbusd_epi32
-        #define vec_add_dpbusd_32x2 Simd::m128_add_dpbusd_epi32x2
         #define vec_hadd Simd::m128_hadd
     #endif
 
@@ -233,16 +228,14 @@ class AffineTransform {
             for (IndexType k = 0; k < NumRegs; ++k)
                 acc[k] = biasvec[k];
 
-            for (IndexType i = 0; i < NumChunks; i += 2)
+            for (IndexType i = 0; i < NumChunks; ++i)
             {
-                const vec_t in0 = vec_set_32(input32[i + 0]);
-                const vec_t in1 = vec_set_32(input32[i + 1]);
+                const vec_t in0 = vec_set_32(input32[i]);
                 const auto  col0 =
-                  reinterpret_cast<const vec_t*>(&weights[(i + 0) * OutputDimensions * 4]);
-                const auto col1 =
-                  reinterpret_cast<const vec_t*>(&weights[(i + 1) * OutputDimensions * 4]);
+                  reinterpret_cast<const vec_t*>(&weights[i * OutputDimensions * 4]);
+
                 for (IndexType k = 0; k < NumRegs; ++k)
-                    vec_add_dpbusd_32x2(acc[k], in0, col0[k], in1, col1[k]);
+                    vec_add_dpbusd_32(acc[k], in0, col0[k]);
             }
 
             vec_t* outptr = reinterpret_cast<vec_t*>(output);
@@ -252,7 +245,6 @@ class AffineTransform {
     #undef vec_setzero
     #undef vec_set_32
     #undef vec_add_dpbusd_32
-    #undef vec_add_dpbusd_32x2
     #undef vec_hadd
         }
         else if constexpr (OutputDimensions == 1)
@@ -265,14 +257,12 @@ class AffineTransform {
         #define vec_setzero _mm256_setzero_si256
         #define vec_set_32 _mm256_set1_epi32
         #define vec_add_dpbusd_32 Simd::m256_add_dpbusd_epi32
-        #define vec_add_dpbusd_32x2 Simd::m256_add_dpbusd_epi32x2
         #define vec_hadd Simd::m256_hadd
     #elif defined(USE_SSSE3)
             using vec_t = __m128i;
         #define vec_setzero _mm_setzero_si128
         #define vec_set_32 _mm_set1_epi32
         #define vec_add_dpbusd_32 Simd::m128_add_dpbusd_epi32
-        #define vec_add_dpbusd_32x2 Simd::m128_add_dpbusd_epi32x2
         #define vec_hadd Simd::m128_hadd
     #endif
 
@@ -296,7 +286,6 @@ class AffineTransform {
     #undef vec_setzero
     #undef vec_set_32
     #undef vec_add_dpbusd_32
-    #undef vec_add_dpbusd_32x2
     #undef vec_hadd
         }
 #else
@@ -314,6 +303,6 @@ class AffineTransform {
     alignas(CacheLineSize) WeightType weights[OutputDimensions * PaddedInputDimensions];
 };
 
-}  // namespace Stockfish::Eval::NNUE::Layers
+}  // namespace Hypnos::Eval::NNUE::Layers
 
 #endif  // #ifndef NNUE_LAYERS_AFFINE_TRANSFORM_H_INCLUDED

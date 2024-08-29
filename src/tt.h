@@ -1,13 +1,13 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  HypnoS, a UCI chess playing engine derived from Stockfish
   Copyright (C) 2004-2024 The Stockfish developers (see AUTHORS file)
 
-  Stockfish is free software: you can redistribute it and/or modify
+  HypnoS is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Stockfish is distributed in the hope that it will be useful,
+  HypnoS is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -25,19 +25,18 @@
 #include "misc.h"
 #include "types.h"
 
-namespace Stockfish {
+namespace Hypnos {
 
-/// TTEntry struct is the 10 bytes transposition table entry, defined as below:
-///
-/// key        16 bit
-/// depth       8 bit
-/// generation  5 bit
-/// pv node     1 bit
-/// bound type  2 bit
-/// move       16 bit
-/// value      16 bit
-/// eval value 16 bit
-
+// TTEntry struct is the 10 bytes transposition table entry, defined as below:
+//
+// key        16 bit
+// depth       8 bit
+// generation  5 bit
+// pv node     1 bit
+// bound type  2 bit
+// move       16 bit
+// value      16 bit
+// eval value 16 bit
 struct TTEntry {
 
     Move  move() const { return Move(move16); }
@@ -60,12 +59,11 @@ struct TTEntry {
 };
 
 
-/// A TranspositionTable is an array of Cluster, of size clusterCount. Each
-/// cluster consists of ClusterSize number of TTEntry. Each non-empty TTEntry
-/// contains information on exactly one position. The size of a Cluster should
-/// divide the size of a cache line for best performance, as the cacheline is
-/// prefetched when possible.
-
+// A TranspositionTable is an array of Cluster, of size clusterCount. Each
+// cluster consists of ClusterSize number of TTEntry. Each non-empty TTEntry
+// contains information on exactly one position. The size of a Cluster should
+// divide the size of a cache line for best performance, as the cacheline is
+// prefetched when possible.
 class TranspositionTable {
 
     static constexpr int ClusterSize = 3;
@@ -107,6 +105,6 @@ class TranspositionTable {
 
 extern TranspositionTable TT;
 
-}  // namespace Stockfish
+} // namespace Hypnos
 
-#endif  // #ifndef TT_H_INCLUDED
+#endif // #ifndef TT_H_INCLUDED

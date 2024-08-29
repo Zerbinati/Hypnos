@@ -1,13 +1,13 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  HypnoS, a UCI chess playing engine derived from Stockfish
   Copyright (C) 2004-2024 The Stockfish developers (see AUTHORS file)
 
-  Stockfish is free software: you can redistribute it and/or modify
+  HypnoS is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Stockfish is distributed in the hope that it will be useful,
+  HypnoS is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -28,6 +28,7 @@
 #include <iostream>
 #include <sstream>
 #include <string_view>
+#include <unordered_map>
 
 #include "../evaluate.h"
 #include "../misc.h"
@@ -36,8 +37,9 @@
 #include "../uci.h"
 #include "nnue_accumulator.h"
 #include "nnue_common.h"
+#include "evaluate_nnue.h"
 
-namespace Stockfish::Eval::NNUE {
+namespace Hypnos::Eval::NNUE {
 
 // Input feature converter
 LargePagePtr<FeatureTransformer<TransformedFeatureDimensionsBig, &StateInfo::accumulatorBig>>
@@ -177,16 +179,16 @@ static bool write_parameters(std::ostream& stream, NetSize netSize) {
 
 void hint_common_parent_position(const Position& pos) {
 
-    int simpleEval = simple_eval(pos, pos.side_to_move());
-    if (abs(simpleEval) > 1100)
-        featureTransformerSmall->hint_common_access(pos);
+    int simpleEvalAbs = std::abs(simple_eval(pos, pos.side_to_move()));
+    if (simpleEvalAbs > Eval::SmallNetThreshold)
+        featureTransformerSmall->hint_common_access(pos, simpleEvalAbs > Eval::PsqtOnlyThreshold);
     else
-        featureTransformerBig->hint_common_access(pos);
+        featureTransformerBig->hint_common_access(pos, false);
 }
 
 // Evaluation function. Perform differential calculation.
 template<NetSize Net_Size>
-Value evaluate(const Position& pos, bool adjusted, int* complexity) {
+Value evaluate(const Position& pos, bool adjusted, int* complexity, bool psqtOnly) {
 
     // We manually align the arrays on the stack because with gcc < 9.3
     // overaligning stack variables with alignas() doesn't work correctly.
@@ -195,11 +197,10 @@ Value evaluate(const Position& pos, bool adjusted, int* complexity) {
     constexpr int      delta     = 24;
 
 #if defined(ALIGNAS_ON_STACK_VARIABLES_BROKEN)
-    TransformedFeatureType
-      transformedFeaturesUnaligned[FeatureTransformer < Small ? TransformedFeatureDimensionsSmall
-                                                              : TransformedFeatureDimensionsBig,
-                                   nullptr
-                                     > ::BufferSize + alignment / sizeof(TransformedFeatureType)];
+    TransformedFeatureType transformedFeaturesUnaligned
+      [FeatureTransformer < Net_Size == Small ? TransformedFeatureDimensionsSmall
+                                              : TransformedFeatureDimensionsBig,
+       nullptr > ::BufferSize + alignment / sizeof(TransformedFeatureType)];
 
     auto* transformedFeatures = align_ptr_up<alignment>(&transformedFeaturesUnaligned[0]);
 #else
@@ -212,26 +213,30 @@ Value evaluate(const Position& pos, bool adjusted, int* complexity) {
 
     ASSERT_ALIGNED(transformedFeatures, alignment);
 
-    const int  bucket     = (pos.count<ALL_PIECES>() - 1) / 4;
-    const auto psqt       = Net_Size == Small
-                            ? featureTransformerSmall->transform(pos, transformedFeatures, bucket)
-                            : featureTransformerBig->transform(pos, transformedFeatures, bucket);
-    const auto positional = Net_Size == Small ? networkSmall[bucket]->propagate(transformedFeatures)
-                                              : networkBig[bucket]->propagate(transformedFeatures);
+    const int bucket = (pos.count<ALL_PIECES>() - 1) / 4;
+    const auto psqt = Net_Size == Small
+        ? featureTransformerSmall->transform(pos, transformedFeatures, bucket, psqtOnly)
+        : featureTransformerBig->transform(pos, transformedFeatures, bucket, psqtOnly);
+
+    const auto positional = !psqtOnly
+        ? (Net_Size == Small ? networkSmall[bucket]->propagate(transformedFeatures)
+                             : networkBig[bucket]->propagate(transformedFeatures))
+        : 0;
 
     if (complexity)
-        *complexity = std::abs(psqt - positional) / OutputScale;
+        *complexity = !psqtOnly ? std::abs(psqt - positional) / OutputScale : 0;
 
     // Give more value to positional evaluation when adjusted flag is set
     if (adjusted)
         return static_cast<Value>(((1024 - delta) * psqt + (1024 + delta) * positional)
+																								
                                   / (1024 * OutputScale));
     else
         return static_cast<Value>((psqt + positional) / OutputScale);
 }
 
-template Value evaluate<Big>(const Position& pos, bool adjusted, int* complexity);
-template Value evaluate<Small>(const Position& pos, bool adjusted, int* complexity);
+template Value evaluate<Big>(const Position& pos, bool adjusted, int* complexity, bool psqtOnly);
+template Value evaluate<Small>(const Position& pos, bool adjusted, int* complexity, bool psqtOnly);
 
 struct NnueEvalTrace {
     static_assert(LayerStacks == PSQTBuckets);
@@ -264,8 +269,9 @@ static NnueEvalTrace trace_evaluate(const Position& pos) {
     t.correctBucket = (pos.count<ALL_PIECES>() - 1) / 4;
     for (IndexType bucket = 0; bucket < LayerStacks; ++bucket)
     {
-        const auto materialist = featureTransformerBig->transform(pos, transformedFeatures, bucket);
-        const auto positional  = networkBig[bucket]->propagate(transformedFeatures);
+        const auto materialist =
+          featureTransformerBig->transform(pos, transformedFeatures, bucket, false);
+        const auto positional = networkBig[bucket]->propagate(transformedFeatures);
 
         t.psqt[bucket]       = static_cast<Value>(materialist / OutputScale);
         t.positional[bucket] = static_cast<Value>(positional / OutputScale);
@@ -277,7 +283,7 @@ static NnueEvalTrace trace_evaluate(const Position& pos) {
 constexpr std::string_view PieceToChar(" PNBRQK  pnbrqk");
 
 
-// format_cp_compact() converts a Value into (centi)pawns and writes it in a buffer.
+// Converts a Value into (centi)pawns and writes it in a buffer.
 // The buffer must have capacity for at least 5 chars.
 static void format_cp_compact(Value v, char* buffer) {
 
@@ -314,19 +320,17 @@ static void format_cp_compact(Value v, char* buffer) {
 }
 
 
-// format_cp_aligned_dot() converts a Value into pawns, always keeping two decimals
+// Converts a Value into pawns, always keeping two decimals
 static void format_cp_aligned_dot(Value v, std::stringstream& stream) {
 
     const double pawns = std::abs(0.01 * UCI::to_cp(v));
 
-    stream << (v < 0   ? '-'
-               : v > 0 ? '+'
-                       : ' ')
-           << std::setiosflags(std::ios::fixed) << std::setw(6) << std::setprecision(2) << pawns;
+    stream << (v < 0 ? '-' : v > 0 ? '+' : ' ') << std::setiosflags(std::ios::fixed)
+           << std::setw(6) << std::setprecision(2) << pawns;
 }
 
 
-// trace() returns a string with the value of each piece on a board,
+// Returns a string with the value of each piece on a board,
 // and a table for (PSQT, Layers) values bucket by bucket.
 std::string trace(Position& pos) {
 
@@ -369,15 +373,16 @@ std::string trace(Position& pos) {
                 auto st = pos.state();
 
                 pos.remove_piece(sq);
-                st->accumulatorBig.computed[WHITE] = false;
-                st->accumulatorBig.computed[BLACK] = false;
-                Value eval                         = evaluate<NNUE::Big>(pos);
-                eval                               = pos.side_to_move() == WHITE ? eval : -eval;
-                v                                  = base - eval;
+                st->accumulatorBig.computed[WHITE]     = st->accumulatorBig.computed[BLACK] =
+                st->accumulatorBig.computedPSQT[WHITE] = st->accumulatorBig.computedPSQT[BLACK] = false;
+
+                Value eval = evaluate<NNUE::Big>(pos);
+                eval       = pos.side_to_move() == WHITE ? eval : -eval;
+                v          = base - eval;
 
                 pos.put_piece(pc, sq);
-                st->accumulatorBig.computed[WHITE] = false;
-                st->accumulatorBig.computed[BLACK] = false;
+                st->accumulatorBig.computed[WHITE]     = st->accumulatorBig.computed[BLACK] =
+                st->accumulatorBig.computedPSQT[WHITE] = st->accumulatorBig.computedPSQT[BLACK] = false;
             }
 
             writeSquare(f, r, pc, v);
@@ -438,7 +443,7 @@ bool save_eval(std::ostream& stream, NetSize netSize) {
     return write_parameters(stream, netSize);
 }
 
-/// Save eval, to a file given by its name
+// Save eval, to a file given by its name
 bool save_eval(const std::optional<std::string>& filename, NetSize netSize) {
 
     std::string actualFilename;
@@ -448,7 +453,7 @@ bool save_eval(const std::optional<std::string>& filename, NetSize netSize) {
         actualFilename = filename.value();
     else
     {
-        if (currentEvalFileName[netSize]
+        if (EvalFiles.at(netSize).selected_name
             != (netSize == Small ? EvalFileDefaultNameSmall : EvalFileDefaultNameBig))
         {
             msg = "Failed to export a net. "
@@ -470,4 +475,5 @@ bool save_eval(const std::optional<std::string>& filename, NetSize netSize) {
 }
 
 
-}  // namespace Stockfish::Eval::NNUE
+}  // namespace Hypnos::Eval::NNUE
+

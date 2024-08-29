@@ -1,13 +1,13 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  HypnoS, a UCI chess playing engine derived from Stockfish
   Copyright (C) 2004-2024 The Stockfish developers (see AUTHORS file)
 
-  Stockfish is free software: you can redistribute it and/or modify
+  HypnoS is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Stockfish is distributed in the hope that it will be useful,
+  HypnoS is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -26,17 +26,16 @@
 #include "movepick.h"
 #include "types.h"
 
-namespace Stockfish {
+namespace Hypnos {
 
 class Position;
 
 namespace Search {
 
 
-/// Stack struct keeps track of the information we need to remember from nodes
-/// shallower and deeper in the tree during the search. Each search thread has
-/// its own array of Stack objects, indexed by the current ply.
-
+// Stack struct keeps track of the information we need to remember from nodes
+// shallower and deeper in the tree during the search. Each search thread has
+// its own array of Stack objects, indexed by the current ply.
 struct Stack {
     Move*           pv;
     PieceToHistory* continuationHistory;
@@ -50,22 +49,22 @@ struct Stack {
     bool            inCheck;
     bool            ttPv;
     bool            ttHit;
-    int             doubleExtensions;
+    int             multipleExtensions;
     int             cutoffCnt;
 };
 
 
-/// RootMove struct is used for moves at the root of the tree. For each root move
-/// we store a score and a PV (really a refutation in the case of moves which
-/// fail low). Score is normally set at -VALUE_INFINITE for all non-pv moves.
-
+// RootMove struct is used for moves at the root of the tree. For each root move
+// we store a score and a PV (really a refutation in the case of moves which
+// fail low). Score is normally set at -VALUE_INFINITE for all non-pv moves.
 struct RootMove {
 
     explicit RootMove(Move m) :
         pv(1, m) {}
     bool extract_ponder_from_tt(Position& pos);
     bool operator==(const Move& m) const { return pv[0] == m; }
-    bool operator<(const RootMove& m) const {  // Sort in descending order
+    // Sort in descending order
+    bool operator<(const RootMove& m) const {
         return m.score != score ? m.score < score : m.previousScore < previousScore;
     }
 
@@ -84,12 +83,13 @@ struct RootMove {
 using RootMoves = std::vector<RootMove>;
 
 
-/// LimitsType struct stores information sent by GUI about available time to
-/// search the current move, maximum depth/time, or if we are in analysis mode.
+// LimitsType struct stores information sent by GUI about available time to
+// search the current move, maximum depth/time, or if we are in analysis mode.
 
 struct LimitsType {
 
-    LimitsType() {  // Init explicitly due to broken value-initialization of non POD in MSVC
+    // Init explicitly due to broken value-initialization of non POD in MSVC
+    LimitsType() {
         time[WHITE] = time[BLACK] = inc[WHITE] = inc[BLACK] = npmsec = movetime = TimePoint(0);
         movestogo = depth = mate = perft = infinite = 0;
         nodes                                       = 0;
@@ -110,6 +110,6 @@ void clear();
 
 }  // namespace Search
 
-}  // namespace Stockfish
+}  // namespace Hypnos
 
 #endif  // #ifndef SEARCH_H_INCLUDED

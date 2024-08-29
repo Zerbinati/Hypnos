@@ -1,13 +1,13 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  HypnoS, a UCI chess playing engine derived from Stockfish
   Copyright (C) 2004-2024 The Stockfish developers (see AUTHORS file)
 
-  Stockfish is free software: you can redistribute it and/or modify
+  HypnoS is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Stockfish is distributed in the hope that it will be useful,
+  HypnoS is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -26,7 +26,7 @@
 #include <utility>
 #include <vector>
 
-namespace Stockfish {
+namespace Hypnos {
 
 using Range    = std::pair<int, int>;  // Option's min-max values
 using RangeFun = Range(int);
@@ -49,31 +49,30 @@ struct SetRange {
 #define SetDefaultRange SetRange(default_range)
 
 
-/// Tune class implements the 'magic' code that makes the setup of a fishtest
-/// tuning session as easy as it can be. Mainly you have just to remove const
-/// qualifiers from the variables you want to tune and flag them for tuning, so
-/// if you have:
-///
-///   const Value myValue[][2] = { { V(100), V(20) }, { V(7), V(78) } };
-///
-/// If you have a my_post_update() function to run after values have been updated,
-/// and a my_range() function to set custom Option's min-max values, then you just
-/// remove the 'const' qualifiers and write somewhere below in the file:
-///
-///   TUNE(SetRange(my_range), myValue, my_post_update);
-///
-/// You can also set the range directly, and restore the default at the end
-///
-///   TUNE(SetRange(-100, 100), myValue, SetDefaultRange);
-///
-/// In case update function is slow and you have many parameters, you can add:
-///
-///   UPDATE_ON_LAST();
-///
-/// And the values update, including post update function call, will be done only
-/// once, after the engine receives the last UCI option, that is the one defined
-/// and created as the last one, so the GUI should send the options in the same
-/// order in which have been defined.
+// Tune class implements the 'magic' code that makes the setup of a fishtest tuning
+// session as easy as it can be. Mainly you have just to remove const qualifiers
+// from the variables you want to tune and flag them for tuning, so if you have:
+//
+//   const Value myValue[][2] = { { V(100), V(20) }, { V(7), V(78) } };
+//
+// If you have a my_post_update() function to run after values have been updated,
+// and a my_range() function to set custom Option's min-max values, then you just
+// remove the 'const' qualifiers and write somewhere below in the file:
+//
+//   TUNE(SetRange(my_range), myValue, my_post_update);
+//
+// You can also set the range directly, and restore the default at the end
+//
+//   TUNE(SetRange(-100, 100), myValue, SetDefaultRange);
+//
+// In case update function is slow and you have many parameters, you can add:
+//
+//   UPDATE_ON_LAST();
+//
+// And the values update, including post update function call, will be done only
+// once, after the engine receives the last UCI option, that is the one defined
+// and created as the last one, so the GUI should send the options in the same
+// order in which have been defined.
 
 class Tune {
 
@@ -99,7 +98,7 @@ class Tune {
     template<typename T>
     struct Entry: public EntryBase {
 
-        static_assert(!std::is_const<T>::value, "Parameter cannot be const!");
+        static_assert(!std::is_const_v<T>, "Parameter cannot be const!");
 
         static_assert(std::is_same_v<T, int> || std::is_same_v<T, PostUpdate>,
                       "Parameter type not supported!");
@@ -164,7 +163,7 @@ class Tune {
     static bool update_on_last;
 };
 
-// Some macro magic :-) we define a dummy int variable that compiler initializes calling Tune::add()
+// Some macro magic :-) we define a dummy int variable that the compiler initializes calling Tune::add()
 #define STRINGIFY(x) #x
 #define UNIQUE2(x, y) x##y
 #define UNIQUE(x, y) UNIQUE2(x, y)  // Two indirection levels to expand __LINE__
@@ -172,6 +171,6 @@ class Tune {
 
 #define UPDATE_ON_LAST() bool UNIQUE(p, __LINE__) = Tune::update_on_last = true
 
-}  // namespace Stockfish
+}  // namespace Hypnos
 
 #endif  // #ifndef TUNE_H_INCLUDED

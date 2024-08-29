@@ -1,13 +1,13 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  HypnoS, a UCI chess playing engine derived from Stockfish
   Copyright (C) 2004-2024 The Stockfish developers (see AUTHORS file)
 
-  Stockfish is free software: you can redistribute it and/or modify
+  HypnoS is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Stockfish is distributed in the hope that it will be useful,
+  HypnoS is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -29,13 +29,12 @@
 #include "thread.h"
 #include "uci.h"
 
-namespace Stockfish {
+namespace Hypnos {
 
 TranspositionTable TT;  // Our global transposition table
 
-/// TTEntry::save() populates the TTEntry with a new node's data, possibly
-/// overwriting an old position. Update is not atomic and can be racy.
-
+// Populates the TTEntry with a new node's data, possibly
+// overwriting an old position. The update is not atomic and can be racy.
 void TTEntry::save(Key k, Value v, bool pv, Bound b, Depth d, Move m, Value ev) {
 
     // Preserve any existing move for the same position
@@ -56,11 +55,9 @@ void TTEntry::save(Key k, Value v, bool pv, Bound b, Depth d, Move m, Value ev) 
     }
 }
 
-
-/// TranspositionTable::resize() sets the size of the transposition table,
-/// measured in megabytes. Transposition table consists of a power of 2 number
-/// of clusters and each cluster consists of ClusterSize number of TTEntry.
-
+// Sets the size of the transposition table,
+// measured in megabytes. Transposition table consists of a power of 2 number
+// of clusters and each cluster consists of ClusterSize number of TTEntry.
 void TranspositionTable::resize(size_t mbSize) {
 
     Threads.main()->wait_for_search_finished();
@@ -79,10 +76,8 @@ void TranspositionTable::resize(size_t mbSize) {
     clear();
 }
 
-
-/// TranspositionTable::clear() initializes the entire transposition table to zero,
-//  in a multi-threaded way.
-
+// Initializes the entire transposition table to zero,
+// in a multi-threaded way.
 void TranspositionTable::clear() {
 
     std::vector<std::thread> threads;
@@ -108,14 +103,12 @@ void TranspositionTable::clear() {
         th.join();
 }
 
-
-/// TranspositionTable::probe() looks up the current position in the transposition
-/// table. It returns true and a pointer to the TTEntry if the position is found.
-/// Otherwise, it returns false and a pointer to an empty or least valuable TTEntry
-/// to be replaced later. The replace value of an entry is calculated as its depth
-/// minus 8 times its relative age. TTEntry t1 is considered more valuable than
-/// TTEntry t2 if its replace value is greater than that of t2.
-
+// Looks up the current position in the transposition
+// table. It returns true and a pointer to the TTEntry if the position is found.
+// Otherwise, it returns false and a pointer to an empty or least valuable TTEntry
+// to be replaced later. The replace value of an entry is calculated as its depth
+// minus 8 times its relative age. TTEntry t1 is considered more valuable than
+// TTEntry t2 if its replace value is greater than that of t2.
 TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
 
     TTEntry* const tte   = first_entry(key);
@@ -147,10 +140,8 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
     return found = false, replace;
 }
 
-
-/// TranspositionTable::hashfull() returns an approximation of the hashtable
-/// occupation during a search. The hash is x permill full, as per UCI protocol.
-
+// Returns an approximation of the hashtable
+// occupation during a search. The hash is x permill full, as per UCI protocol.
 int TranspositionTable::hashfull() const {
 
     int cnt = 0;
@@ -162,4 +153,4 @@ int TranspositionTable::hashfull() const {
     return cnt / ClusterSize;
 }
 
-}  // namespace Stockfish
+} // namespace Hypnos

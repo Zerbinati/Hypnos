@@ -1,12 +1,12 @@
-# Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+# HypnoS, a UCI chess playing engine derived from Stockfish
 # Copyright (C) 2004-2024 The Stockfish developers (see AUTHORS file)
 #
-# Stockfish is free software: you can redistribute it and/or modify
+# HypnoS is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Stockfish is distributed in the hope that it will be useful,
+# HypnoS is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
@@ -20,9 +20,9 @@
 ### ==========================================================================
 
 ### Establish the operating system name
-KERNEL = $(shell uname -s)
+KERNEL := $(shell uname -s)
 ifeq ($(KERNEL),Linux)
-	OS = $(shell uname -o)
+	OS := $(shell uname -o)
 endif
 
 ### Target Windows OS
@@ -33,7 +33,7 @@ ifeq ($(OS),Windows_NT)
 else ifeq ($(COMP),mingw)
 	target_windows = yes
 	ifeq ($(WINE_PATH),)
-		WINE_PATH = $(shell which wine)
+		WINE_PATH := $(shell which wine)
 	endif
 endif
 
@@ -49,13 +49,18 @@ PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
 
 ### Built-in benchmark for pgo-builds
-PGOBENCH = $(WINE_PATH) ./$(EXE) bench
+ifeq ($(SDE_PATH),)
+	PGOBENCH = $(WINE_PATH) ./$(EXE) bench
+else
+	PGOBENCH = $(SDE_PATH) -icx -- $(WINE_PATH) ./$(EXE) bench
+endif
 
 ### Source and object files
 SRCS = benchmark.cpp bitboard.cpp evaluate.cpp main.cpp \
 	misc.cpp movegen.cpp movepick.cpp position.cpp \
 	search.cpp thread.cpp timeman.cpp tt.cpp uci.cpp ucioption.cpp tune.cpp syzygy/tbprobe.cpp \
 	nnue/evaluate_nnue.cpp nnue/features/half_ka_v2_hm.cpp
+
 HEADERS = benchmark.h bitboard.h evaluate.h misc.h movegen.h movepick.h \
 		nnue/evaluate_nnue.h nnue/features/half_ka_v2_hm.h nnue/layers/affine_transform.h \
 		nnue/layers/affine_transform_sparse_input.h nnue/layers/clipped_relu.h nnue/layers/simd.h \
@@ -115,7 +120,7 @@ ifeq ($(ARCH),)
 endif
 
 ifeq ($(ARCH), native)
-   override ARCH = $(shell  $(SHELL) ../scripts/get_native_properties.sh | cut -d " " -f 1)
+   override ARCH := $(shell $(SHELL) ../scripts/get_native_properties.sh | cut -d " " -f 1)
 endif
 
 # explicitly check for the list of supported architectures (as listed with make help),
@@ -124,7 +129,7 @@ ifeq ($(ARCH), $(filter $(ARCH), \
                  x86-64-vnni512 x86-64-vnni256 x86-64-avx512 x86-64-avxvnni x86-64-bmi2 \
                  x86-64-avx2 x86-64-sse41-popcnt x86-64-modern x86-64-ssse3 x86-64-sse3-popcnt \
                  x86-64 x86-32-sse41-popcnt x86-32-sse2 x86-32 ppc-64 ppc-32 e2k \
-                 armv7 armv7-neon armv8 armv8-dotprod apple-silicon general-64 general-32 riscv64))
+                 armv7 armv7-neon armv8 armv8-dotprod apple-silicon general-64 general-32 riscv64 loongarch64))
    SUPPORTED_ARCH=true
 else
    SUPPORTED_ARCH=false
@@ -368,6 +373,10 @@ endif
 ifeq ($(ARCH),riscv64)
 	arch = riscv64
 endif
+
+ifeq ($(ARCH),loongarch64)
+	arch = loongarch64
+endif
 endif
 
 
@@ -403,6 +412,8 @@ ifeq ($(COMP),gcc)
 		ifeq ($(ARCH),riscv64)
 			CXXFLAGS += -latomic
 		endif
+	else ifeq ($(ARCH),loongarch64)
+		CXXFLAGS += -latomic
 	else
 		CXXFLAGS += -m$(bits)
 		LDFLAGS += -m$(bits)
@@ -473,6 +484,8 @@ ifeq ($(COMP),clang)
 		ifeq ($(ARCH),riscv64)
 			CXXFLAGS += -latomic
 		endif
+	else ifeq ($(ARCH),loongarch64)
+		CXXFLAGS += -latomic
 	else
 		CXXFLAGS += -m$(bits)
 		LDFLAGS += -m$(bits)
@@ -512,14 +525,6 @@ ifeq ($(COMP),ndk)
 			STRIP=llvm-strip
 		endif
 	endif
-	ifeq ($(arch),x86_64)
-		CXX=x86_64-linux-android21-clang++
-		ifneq ($(shell which x86_64-linux-android-strip 2>/dev/null),)
-			STRIP=x86_64-linux-android-strip
-		else
-			STRIP=llvm-strip
-		endif
-	endif
 	LDFLAGS += -static-libstdc++ -pie -lm -latomic
 endif
 
@@ -544,8 +549,8 @@ endif
 
 ### Sometimes gcc is really clang
 ifeq ($(COMP),gcc)
-	gccversion = $(shell $(CXX) --version 2>/dev/null)
-	gccisclang = $(findstring clang,$(gccversion))
+	gccversion := $(shell $(CXX) --version 2>/dev/null)
+	gccisclang := $(findstring clang,$(gccversion))
 	ifneq ($(gccisclang),)
 		profile_make = clang-profile-make
 		profile_use = clang-profile-use
@@ -603,7 +608,7 @@ ifeq ($(optimize),yes)
 	endif
 
 	ifeq ($(comp),clang)
-		clangmajorversion = $(shell $(CXX) -dumpversion 2>/dev/null | cut -f1 -d.)
+		clangmajorversion := $(shell $(CXX) -dumpversion 2>/dev/null | cut -f1 -d.)
 		ifeq ($(shell expr $(clangmajorversion) \< 16),1)
 			CXXFLAGS += -fexperimental-new-pass-manager
 		endif
@@ -719,15 +724,20 @@ ifeq ($(pext),yes)
 endif
 
 ### 3.8.1 Try to include git commit sha for versioning
-GIT_SHA = $(shell git rev-parse HEAD 2>/dev/null | cut -c 1-8)
+GIT_SHA := $(shell git rev-parse HEAD 2>/dev/null | cut -c 1-8)
 ifneq ($(GIT_SHA), )
 	CXXFLAGS += -DGIT_SHA=$(GIT_SHA)
 endif
 
 ### 3.8.2 Try to include git commit date for versioning
-GIT_DATE = $(shell git show -s --date=format:'%Y%m%d' --format=%cd HEAD 2>/dev/null)
+GIT_DATE := $(shell git show -s --date=format:'%Y%m%d' --format=%cd HEAD 2>/dev/null)
 ifneq ($(GIT_DATE), )
 	CXXFLAGS += -DGIT_DATE=$(GIT_DATE)
+endif
+
+### 3.8.3 Try to include architecture
+ifneq ($(ARCH), )
+	CXXFLAGS += -DARCH=$(ARCH)
 endif
 
 ### 3.9 Link Time Optimization
@@ -784,7 +794,7 @@ build: config-sanity
 
 help:
 	@echo ""
-	@echo "To compile hypnos, type: "
+	@echo "To compile Hypnos, type: "
 	@echo ""
 	@echo "make -j target [ARCH=arch] [COMP=compiler] [COMPCXX=cxx]"
 	@echo ""
@@ -826,11 +836,12 @@ help:
 	@echo "general-64              > unspecified 64-bit"
 	@echo "general-32              > unspecified 32-bit"
 	@echo "riscv64                 > RISC-V 64-bit"
+	@echo "loongarch64             > LoongArch 64-bit"
 	@echo ""
 	@echo "Supported compilers:"
 	@echo ""
-	@echo "gcc                     > Gnu compiler (default)"
-	@echo "mingw                   > Gnu compiler with MinGW under Windows"
+	@echo "gcc                     > GNU compiler (default)"
+	@echo "mingw                   > GNU compiler with MinGW under Windows"
 	@echo "clang                   > LLVM Clang compiler"
 	@echo "icx                     > Intel oneAPI DPC++/C++ Compiler"
 	@echo "ndk                     > Google NDK to cross-compile for Android"
@@ -853,12 +864,15 @@ ifneq ($(SUPPORTED_ARCH), true)
 endif
 
 
-.PHONY: help build profile-build strip install clean net objclean profileclean \
-	config-sanity \
+.PHONY: help analyze build profile-build strip install clean net \
+	objclean profileclean config-sanity \
 	icx-profile-use icx-profile-make \
 	gcc-profile-use gcc-profile-make \
 	clang-profile-use clang-profile-make FORCE \
-	format
+	format analyze
+
+analyze: net config-sanity objclean
+	$(MAKE) -k ARCH=$(ARCH) COMP=$(COMP) $(OBJS)
 
 build: net config-sanity
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) all
@@ -869,8 +883,7 @@ profile-build: net config-sanity objclean profileclean
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) $(profile_make)
 	@echo ""
 	@echo "Step 2/4. Running benchmark for pgo-build ..."
-	$(PGOBENCH) > PGOBENCH.out 2>&1
-	tail -n 4 PGOBENCH.out
+	$(PGOBENCH)
 	@echo ""
 	@echo "Step 3/4. Building optimized executable ..."
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) objclean
@@ -891,7 +904,20 @@ install:
 clean: objclean profileclean
 	@rm -f .depend *~ core
 
-# evaluation network (nnue)
+# clean binaries and objects
+objclean:
+	@rm -f hypnos hypnos.exe *.o ./syzygy/*.o ./nnue/*.o ./nnue/features/*.o
+
+# clean auxiliary profiling files
+profileclean:
+	@rm -rf profdir
+	@rm -f bench.txt *.gcda *.gcno ./syzygy/*.gcda ./nnue/*.gcda ./nnue/features/*.gcda *.s PGOBENCH.out
+	@rm -f hypnos.profdata *.profraw
+	@rm -f hypnos.*args*
+	@rm -f hypnos.*lt*
+	@rm -f hypnos.res
+	@rm -f ./-lstdc++.res
+
 define fetch_network
 	@echo "Default net: $(nnuenet)"
 	@if [ "x$(curl_or_wget)" = "x" ]; then \
@@ -946,20 +972,6 @@ net:
 	$(call netvariables, EvalFileDefaultNameSmall)
 	$(call fetch_network)
 
-# clean binaries and objects
-objclean:
-	@rm -f hypnos hypnos.exe *.o ./syzygy/*.o ./nnue/*.o ./nnue/features/*.o
-
-# clean auxiliary profiling files
-profileclean:
-	@rm -rf profdir
-	@rm -f bench.txt *.gcda *.gcno ./syzygy/*.gcda ./nnue/*.gcda ./nnue/features/*.gcda *.s 
-	@rm -f hypnos.profdata *.profraw
-	@rm -f hypnos.*args*
-	@rm -f hypnos.*lt*
-	@rm -f hypnos.res
-	@rm -f ./-lstdc++.res
-
 format:
 	$(CLANG-FORMAT) -i $(SRCS) $(HEADERS) -style=file
 
@@ -1013,7 +1025,7 @@ config-sanity:
 	@test "$(SUPPORTED_ARCH)" = "true"
 	@test "$(arch)" = "any" || test "$(arch)" = "x86_64" || test "$(arch)" = "i386" || \
 	 test "$(arch)" = "ppc64" || test "$(arch)" = "ppc" || test "$(arch)" = "e2k" || \
-	 test "$(arch)" = "armv7" || test "$(arch)" = "armv8" || test "$(arch)" = "arm64" || test "$(arch)" = "riscv64"
+	 test "$(arch)" = "armv7" || test "$(arch)" = "armv8" || test "$(arch)" = "arm64" || test "$(arch)" = "riscv64" || test "$(arch)" = "loongarch64"
 	@test "$(bits)" = "32" || test "$(bits)" = "64"
 	@test "$(prefetch)" = "yes" || test "$(prefetch)" = "no"
 	@test "$(popcnt)" = "yes" || test "$(popcnt)" = "no"

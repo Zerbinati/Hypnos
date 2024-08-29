@@ -1,13 +1,13 @@
 /*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+  HypnoS, a UCI chess playing engine derived from Stockfish
   Copyright (C) 2004-2024 The Stockfish developers (see AUTHORS file)
 
-  Stockfish is free software: you can redistribute it and/or modify
+  HypnoS is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Stockfish is distributed in the hope that it will be useful,
+  HypnoS is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -26,7 +26,7 @@
 
 #include "types.h"
 
-namespace Stockfish {
+namespace Hypnos {
 
 class Position;
 
@@ -34,22 +34,22 @@ namespace UCI {
 
 // Normalizes the internal value as reported by evaluate or search
 // to the UCI centipawn result used in output. This value is derived from
-// the win_rate_model() such that Stockfish outputs an advantage of
+// the win_rate_model() such that Hypnos outputs an advantage of
 // "100 centipawns" for a position if the engine has a 50% probability to win
-// from this position in selfplay at fishtest LTC time control.
+// from this position in self-play at fishtest LTC time control.
 const int NormalizeToPawnValue = 328;
 
 class Option;
 
-/// Define a custom comparator, because the UCI options should be case-insensitive
+// Define a custom comparator, because the UCI options should be case-insensitive
 struct CaseInsensitiveLess {
     bool operator()(const std::string&, const std::string&) const;
 };
 
-/// The options container is defined as a std::map
+// The options container is defined as a std::map
 using OptionsMap = std::map<std::string, Option, CaseInsensitiveLess>;
 
-/// The Option class implements each option as specified by the UCI protocol
+// The Option class implements each option as specified by the UCI protocol
 class Option {
 
     using OnChange = void (*)(const Option&);
@@ -90,6 +90,6 @@ Move        to_move(const Position& pos, std::string& str);
 
 extern UCI::OptionsMap Options;
 
-}  // namespace Stockfish
+}  // namespace Hypnos
 
 #endif  // #ifndef UCI_H_INCLUDED
